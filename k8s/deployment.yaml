@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-sa-token-issuer
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-sa-token-issuer
+  template:
+    metadata:
+      labels:
+        app: simple-sa-token-issuer
+    spec:
+      serviceAccountName: token-issuer-sa
+      containers:
+      - name: simple-sa-token-issuer
+        image: simple-sa-token-issuer:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: token-issuer-secret
+              key: auth-token
+        - name: READONLY_SA
+          value: "readonly"
+        - name: READONLY_NS
+          value: "default"
+        - name: ADMIN_SA
+          value: "admin"
+        - name: ADMIN_NS
+          value: "default"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple-sa-token-issuer
+  namespace: default
+spec:
+  selector:
+    app: simple-sa-token-issuer
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP

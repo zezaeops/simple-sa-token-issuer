@@ -1,0 +1,16 @@
+services:
+  simple-sa-token-issuer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - AUTH_TOKEN=test-token
+      - READONLY_SA=readonly
+      - READONLY_NS=default
+      - ADMIN_SA=admin
+      - ADMIN_NS=default
+    # This is for local development only
+    # In a real Kubernetes environment, the service would use in-cluster config
