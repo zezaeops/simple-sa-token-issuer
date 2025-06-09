@@ -16,7 +16,7 @@ This application provides a secure way to issue Kubernetes service account token
 
 ## Prerequisites
 
-- Go 1.23 or later (for development)
+- Go 1.24 or later (for development)
 - Docker (for building container images)
 - Kubernetes cluster (for deployment)
 - kubectl configured to access your cluster
