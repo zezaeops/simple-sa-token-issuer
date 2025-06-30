@@ -30,11 +30,22 @@ type TokenRequest struct {
 	Role string `json:"role"`
 }
 
+type ExecCredentialSpec struct {
+	Interactive bool `json:"interactive"`
+}
+
+type ExecCredentialStatus struct {
+	Token                 string      `json:"token,omitempty"`
+	ExpirationTimestamp   metav1.Time `json:"expirationTimestamp,omitempty"`
+	ClientCertificateData string      `json:"clientCertificateData,omitempty"`
+	ClientKeyData         string      `json:"clientKeyData,omitempty"`
+}
+
 type TokenResponse struct {
-	Kind                string      `json:"kind"`
-	APIVersion          string      `json:"apiVersion"`
-	Token               string      `json:"token"`
-	ExpirationTimestamp metav1.Time `json:"expirationTimestamp,omitempty"`
+	Kind       string               `json:"kind"`
+	APIVersion string               `json:"apiVersion"`
+	Spec       ExecCredentialSpec   `json:"spec"`
+	Status     ExecCredentialStatus `json:"status"`
 }
 
 func loadConfig() *Config {
@@ -191,10 +202,15 @@ func tokenHandler(clientset *kubernetes.Clientset, config *Config) http.HandlerF
 
 		// Prepare response in client.authentication.k8s.io/v1beta1 format
 		resp := TokenResponse{
-			Kind:                "ExecCredential",
-			APIVersion:          "client.authentication.k8s.io/v1beta1",
-			Token:               tr.Status.Token,
-			ExpirationTimestamp: tr.Status.ExpirationTimestamp,
+			Kind:       "ExecCredential",
+			APIVersion: "client.authentication.k8s.io/v1beta1",
+			Spec: ExecCredentialSpec{
+				Interactive: false,
+			},
+			Status: ExecCredentialStatus{
+				Token:               tr.Status.Token,
+				ExpirationTimestamp: tr.Status.ExpirationTimestamp,
+			},
 		}
 
 		w.Header().Set("Content-Type", "application/json")

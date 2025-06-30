@@ -5,11 +5,17 @@
 BINARY_NAME=simple-sa-token-issuer
 DOCKER_IMAGE=simple-sa-token-issuer:latest
 
-build:
+tidy:
+	go mod tidy
+
+build: tidy
 	go build -o $(BINARY_NAME) .
 
 run: build
 	./$(BINARY_NAME)
+
+lint: tidy
+	golangci-lint run --fix
 
 docker-build:
 	docker build -t $(DOCKER_IMAGE) .
