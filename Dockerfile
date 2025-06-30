@@ -14,6 +14,12 @@ FROM alpine:latest AS app
 
 WORKDIR /
 
+RUN addgroup -g 1001 golang && \
+    adduser --shell /sbin/nologin --disabled-password \
+    --no-create-home --uid 1001 --ingroup golang golang
+
 COPY --from=builder /simple-sa-token-issuer /simple-sa-token-issuer
+
+USER golang
 
 ENTRYPOINT ["/simple-sa-token-issuer"]

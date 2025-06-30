@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: token-issuer-config
+  namespace: default
+data:
+  roles-config: |
+    {
+      "read-only": {
+        "serviceAccount": "readonly",
+        "namespace": "default"
+      },
+      "admin": {
+        "serviceAccount": "admin",
+        "namespace": "default"
+      },
+      "developer": {
+        "serviceAccount": "developer",
+        "namespace": "development"
+      },
+      "monitoring": {
+        "serviceAccount": "monitoring",
+        "namespace": "monitoring"
+      }
+    } 

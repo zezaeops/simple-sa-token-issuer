@@ -14,14 +14,16 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type RoleConfig struct {
+	ServiceAccount string `json:"serviceAccount"`
+	Namespace      string `json:"namespace"`
+}
+
 type Config struct {
-	Port           string
-	AuthToken      string
-	ReadOnlySA     string
-	ReadOnlyNS     string
-	AdminSA        string
-	AdminNS        string
-	TokenExpiryMin int64
+	Port           string                `json:"port"`
+	AuthToken      string                `json:"authToken"`
+	Roles          map[string]RoleConfig `json:"roles"`
+	TokenExpiryMin int64                 `json:"tokenExpiryMin"`
 }
 
 type TokenRequest struct {
@@ -38,21 +40,37 @@ type TokenResponse struct {
 func loadConfig() *Config {
 	port := getEnvOrDefault("PORT", "8080")
 	authToken := getEnvOrDefault("AUTH_TOKEN", "")
-	readOnlySA := getEnvOrDefault("READONLY_SA", "readonly")
-	readOnlyNS := getEnvOrDefault("READONLY_NS", "default")
-	adminSA := getEnvOrDefault("ADMIN_SA", "admin")
-	adminNS := getEnvOrDefault("ADMIN_NS", "default")
+	rolesConfigJSON := getEnvOrDefault("ROLES_CONFIG", getDefaultRolesConfig())
 	tokenExpiryMin := int64(60) // Default 60 minutes
+
+	// Parse roles configuration
+	var roles map[string]RoleConfig
+	if err := json.Unmarshal([]byte(rolesConfigJSON), &roles); err != nil {
+		log.Fatalf("Failed to parse ROLES_CONFIG: %v", err)
+	}
 
 	return &Config{
 		Port:           port,
 		AuthToken:      authToken,
-		ReadOnlySA:     readOnlySA,
-		ReadOnlyNS:     readOnlyNS,
-		AdminSA:        adminSA,
-		AdminNS:        adminNS,
+		Roles:          roles,
 		TokenExpiryMin: tokenExpiryMin,
 	}
+}
+
+func getDefaultRolesConfig() string {
+	defaultRoles := map[string]RoleConfig{
+		"read-only": {
+			ServiceAccount: "readonly",
+			Namespace:      "default",
+		},
+		"admin": {
+			ServiceAccount: "admin",
+			Namespace:      "default",
+		},
+	}
+
+	jsonBytes, _ := json.Marshal(defaultRoles)
+	return string(jsonBytes)
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
@@ -77,6 +95,9 @@ func main() {
 		log.Fatalf("Failed to create clientset: %v", err)
 	}
 
+	// Log available roles
+	log.Printf("Available roles: %v", getAvailableRoles(config.Roles))
+
 	// Set up HTTP server
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/token", authMiddleware(config.AuthToken, tokenHandler(clientset, config)))
@@ -85,6 +106,14 @@ func main() {
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", config.Port), nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func getAvailableRoles(roles map[string]RoleConfig) []string {
+	roleNames := make([]string, 0, len(roles))
+	for roleName := range roles {
+		roleNames = append(roleNames, roleName)
+	}
+	return roleNames
 }
 
 func healthzHandler(w http.ResponseWriter, _ *http.Request) {
@@ -137,17 +166,10 @@ func tokenHandler(clientset *kubernetes.Clientset, config *Config) http.HandlerF
 			return
 		}
 
-		// Determine which service account to use based on role
-		var saName, saNamespace string
-		switch req.Role {
-		case "read-only":
-			saName = config.ReadOnlySA
-			saNamespace = config.ReadOnlyNS
-		case "admin":
-			saName = config.AdminSA
-			saNamespace = config.AdminNS
-		default:
-			http.Error(w, "Invalid role specified", http.StatusBadRequest)
+		// Get role configuration
+		roleConfig, exists := config.Roles[req.Role]
+		if !exists {
+			http.Error(w, fmt.Sprintf("Invalid role specified. Available roles: %v", getAvailableRoles(config.Roles)), http.StatusBadRequest)
 			return
 		}
 
@@ -160,9 +182,9 @@ func tokenHandler(clientset *kubernetes.Clientset, config *Config) http.HandlerF
 		}
 
 		// Request token from Kubernetes API
-		tr, err := clientset.CoreV1().ServiceAccounts(saNamespace).CreateToken(r.Context(), saName, tokenRequest, metav1.CreateOptions{})
+		tr, err := clientset.CoreV1().ServiceAccounts(roleConfig.Namespace).CreateToken(r.Context(), roleConfig.ServiceAccount, tokenRequest, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Failed to create token: %v", err)
+			log.Printf("Failed to create token for role %s (SA: %s, NS: %s): %v", req.Role, roleConfig.ServiceAccount, roleConfig.Namespace, err)
 			http.Error(w, "Failed to create token", http.StatusInternalServerError)
 			return
 		}

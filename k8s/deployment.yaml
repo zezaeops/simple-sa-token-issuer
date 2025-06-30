@@ -28,14 +28,11 @@ spec:
             secretKeyRef:
               name: token-issuer-secret
               key: auth-token
-        - name: READONLY_SA
-          value: "readonly"
-        - name: READONLY_NS
-          value: "default"
-        - name: ADMIN_SA
-          value: "admin"
-        - name: ADMIN_NS
-          value: "default"
+        - name: ROLES_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: token-issuer-config
+              key: roles-config
         livenessProbe:
           httpGet:
             path: /healthz

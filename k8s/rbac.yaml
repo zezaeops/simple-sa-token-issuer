@@ -82,3 +82,80 @@ roleRef:
   kind: ClusterRole
   name: admin-role
   apiGroup: rbac.authorization.k8s.io
+---
+# Additional example namespaces for demonstration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+# Developer role - limited permissions in development namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: developer
+  namespace: development
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer-role
+  namespace: development
+rules:
+- apiGroups: ["", "apps", "batch"]
+  resources: ["pods", "services", "configmaps", "deployments", "statefulsets", "jobs", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer-binding
+  namespace: development
+subjects:
+- kind: ServiceAccount
+  name: developer
+  namespace: development
+roleRef:
+  kind: Role
+  name: developer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Monitoring role - read-only access to monitoring resources
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "services", "endpoints", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring-binding
+subjects:
+- kind: ServiceAccount
+  name: monitoring
+  namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: monitoring-role
+  apiGroup: rbac.authorization.k8s.io
