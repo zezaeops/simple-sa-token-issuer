@@ -200,10 +200,10 @@ func tokenHandler(clientset *kubernetes.Clientset, config *Config) http.HandlerF
 			return
 		}
 
-		// Prepare response in client.authentication.k8s.io/v1beta1 format
+		// Prepare response in client.authentication.k8s.io/v1 format
 		resp := TokenResponse{
 			Kind:       "ExecCredential",
-			APIVersion: "client.authentication.k8s.io/v1beta1",
+			APIVersion: "client.authentication.k8s.io/v1",
 			Spec: ExecCredentialSpec{
 				Interactive: false,
 			},

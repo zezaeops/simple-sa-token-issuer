@@ -208,7 +208,7 @@ Response format:
 ```json
 {
   "kind": "ExecCredential",
-  "apiVersion": "client.authentication.k8s.io/v1beta1",
+  "apiVersion": "client.authentication.k8s.io/v1",
   "spec": {
     "interactive": false
   },
