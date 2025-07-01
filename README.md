@@ -209,8 +209,13 @@ Response format:
 {
   "kind": "ExecCredential",
   "apiVersion": "client.authentication.k8s.io/v1beta1",
-  "token": "<kubernetes-service-account-token>",
-  "expirationTimestamp": "2023-01-01T00:00:00Z"
+  "spec": {
+    "interactive": false
+  },
+  "status": {
+    "token": "<kubernetes-service-account-token>",
+    "expirationTimestamp": "2023-01-01T00:00:00Z"
+  }
 }
 ```
 
